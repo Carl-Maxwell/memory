@@ -7,6 +7,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
   window.CARD_WIDTH  = 140 * CARD_SCALE;
   window.CARD_HEIGHT = 190 * CARD_SCALE;
 
+  // TODO load one of the cards and grab CARD_WIDTH &c from it
+
   var app = new PIXI.Application({ width: WIDTH, height: HEIGHT });
 
   app.view.style = "margin: 0 auto; display: block;"
@@ -30,29 +32,34 @@ document.addEventListener("DOMContentLoaded", function(event) {
   // setup the game elements
   for (var i = 0; i < 6; i++) {
     for (var j = 0; j < 3; j++) {
-      var card = {};
-
-      card.sprite = PIXI.Sprite.fromImage(asset_path(suit_choices.pop()));
-
-      card.sprite.interactive = true;
-      card.sprite.buttonMode = true;
-
-      card.sprite.x = 10 + i * (CARD_WIDTH + 20);
-      card.sprite.y = 10 + j * (CARD_HEIGHT + 20);
-
-      card.sprite.scale.x = CARD_SCALE;
-      card.sprite.scale.y = CARD_SCALE;
-
-      card.sprite.on('pointerdown', onClick);
-
-      card.sprite.card_index = cards.length - 1;
-
-      app.stage.addChild(card.sprite);
-
-      cards.push(card);
+      var card = new Card(app, cards, suit_choices.pop());
     }
   }
 });
+
+function Card(app, cards, value) {
+  this.sprite = PIXI.Sprite.fromImage(asset_path(value));
+
+  this.sprite.interactive = true;
+  this.sprite.buttonMode  = true;
+
+  this.sprite.x = 10 + i * (CARD_WIDTH  + 20);
+  this.sprite.y = 10 + j * (CARD_HEIGHT + 20);
+
+  this.sprite.scale.x = CARD_SCALE;
+  this.sprite.scale.y = CARD_SCALE;
+
+  this.sprite.on('pointerdown', onClick);
+
+  this.sprite.card_index = cards.length - 1;
+  cards.push(this);
+
+  app.stage.addChild(this.sprite);
+}
+
+//
+//
+//
 
 function random_suit() {
   // TODO check this math
