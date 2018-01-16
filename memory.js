@@ -9,9 +9,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   // TODO load one of the cards and grab CARD_WIDTH &c from it
 
-  var app = new PIXI.Application({ width: WIDTH, height: HEIGHT });
+  window.app = new PIXI.Application({ width: WIDTH, height: HEIGHT });
 
-  app.view.style = "margin: 0 auto; display: block;"
+  app.view.style = "margin: 0 auto; display: block;";
 
   document.body.appendChild(app.view);
 
@@ -19,6 +19,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   window.SUITS = ['spade', 'club', 'diamond', 'heart'];
 
+  setup_game();
+});
+
+function setup_game() {
   var suit_choices = [];
 
   for (var i = 0; i < 6*3/2; i++) {
@@ -30,31 +34,57 @@ document.addEventListener("DOMContentLoaded", function(event) {
   suit_choices = shuffle(suit_choices);
 
   // setup the game elements
-  for (var i = 0; i < 6; i++) {
-    for (var j = 0; j < 3; j++) {
+  for (var i = 0; i < 3; i++) {
+    for (var j = 0; j < 6; j++) {
       var card = new Card(app, cards, suit_choices.pop());
+
+      card.sprite.x = 10 + j * (CARD_WIDTH  + 20);
+      card.sprite.y = 10 + i * (CARD_HEIGHT + 20);
     }
   }
-});
+}
+
+//
+// Card class
+//
 
 function Card(app, cards, value) {
-  this.sprite = PIXI.Sprite.fromImage(asset_path(value));
+  this.value        = value;
+  this.back_texture = PIXI.Texture.fromImage(asset_path('blue_back'));
+  this.face_texture = PIXI.Texture.fromImage(asset_path(value));
+
+  this.sprite = new PIXI.Sprite(this.back_texture);
 
   this.sprite.interactive = true;
   this.sprite.buttonMode  = true;
-
-  this.sprite.x = 10 + i * (CARD_WIDTH  + 20);
-  this.sprite.y = 10 + j * (CARD_HEIGHT + 20);
 
   this.sprite.scale.x = CARD_SCALE;
   this.sprite.scale.y = CARD_SCALE;
 
   this.sprite.on('pointerdown', onClick);
 
-  this.sprite.card_index = cards.length - 1;
+  this.sprite.card_index = cards.length;
   cards.push(this);
 
   app.stage.addChild(this.sprite);
+}
+
+Card.prototype.flip = function() {
+  if (this.is_revealed()) {
+    this.sprite.texture = this.back_texture;
+  } else {
+    this.sprite.texture = this.face_texture;
+  }
+}
+
+Card.prototype.is_revealed = function() {
+  return this.sprite.texture != this.back_texture;
+}
+
+Card.prototype.destroy = function() {
+  // this.back_texture.destroy();
+  // this.face_texture.destroy();
+  this.sprite.destroy();
 }
 
 //
@@ -67,15 +97,67 @@ function random_suit() {
 }
 
 function onClick (click_event) {
+  var revealed = get_revealed();
+  if (revealed.length > 1) {
+    return;
+  }
+
   var sprite = click_event.target;
 
   card = cards[sprite.card_index];
 
-  sprite.scale.x *= 0.25;
-  sprite.scale.y *= 0.25;
+  card.flip();
+
+  setTimeout(check_for_match, 800);
 }
 
+function get_revealed() {
+  var revealed = [];
+  for (var i = 0; i < cards.length; i++) {
+    if (cards[i] && cards[i].is_revealed()) {
+      revealed.push(i);
+    }
+  }
+
+  return revealed;
+}
+
+function check_for_match() {
+  var revealed = get_revealed();
+
+  if (revealed.length == 2) {
+    a = revealed[0];
+    b = revealed[1];
+    if (cards[a].value == cards[b].value) {
+      cards[a].destroy();
+      cards[b].destroy();
+
+      cards[a] = null;
+      cards[b] = null;
+
+      if (is_game_over()) {
+        setup_game();
+      }
+    } else {
+      cards[a].flip();
+      cards[b].flip();
+    }
+  }
+}
+
+function is_game_over() {
+  for (var i = 0; i < cards.length; i++) {
+    if (cards[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+//
 //  Fisher-Yates shuffle according to internet
+//
 
 function shuffle(input_array) {
   var array = input_array;
